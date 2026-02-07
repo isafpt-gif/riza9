@@ -18,7 +18,6 @@ body {
   overflow: hidden;
   color: white;
 }
-
 @keyframes bg {
   0% { background-position: 0% 50%; }
   50% { background-position: 100% 50%; }
@@ -82,75 +81,107 @@ button {
 <div id="success">
   <div class="name static">Riza 💕</div>
   <p style="font-size:20px;">You just made my heart the happiest ❤️</p>
-  <p>Love, Isaf 💌</p>
+  <p>With Love, Isaf 💌</p>
 </div>
 
 <div id="musicContainer"></div>
 
 <script>
+/* ===== CANVAS SETUP ===== */
 const canvas = document.getElementById("fireworks");
 const ctx = canvas.getContext("2d");
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-let particles = [];
+window.addEventListener("resize", ()=>{
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+});
 
-/* ===== NO BUTTON ===== */
+/* ===== NO BUTTON LOGIC ===== */
 const noBtn = document.getElementById("no");
 function moveNoButton() {
-  const maxX = window.innerWidth - noBtn.offsetWidth - 10;
-  const maxY = window.innerHeight - noBtn.offsetHeight - 10;
+  const padding = 20;
+  const maxX = window.innerWidth - noBtn.offsetWidth - padding;
+  const maxY = window.innerHeight - noBtn.offsetHeight - padding;
   noBtn.style.left = Math.random() * maxX + "px";
   noBtn.style.top = Math.random() * maxY + "px";
 }
 noBtn.addEventListener("mouseenter", moveNoButton);
 noBtn.addEventListener("touchstart", moveNoButton);
 
-/* ===== HEARTS FALLING (INITIAL PAGE) ===== */
-function createHeart() {
-  particles.push({
-    x: Math.random() * canvas.width,
+/* ===== PARTICLES ===== */
+let hearts = [];
+let fireworks = [];
+
+function createHeart(normal=true) {
+  hearts.push({
+    x: Math.random()*canvas.width,
     y: -10,
     vx: (Math.random()-0.5)*1.5,
-    vy: 2 + Math.random()*2,
-    size: 10 + Math.random()*10,
-    color: "red",
-    type: "heart"
+    vy: normal ? 2 + Math.random()*2 : 3 + Math.random()*2,
+    size: 10 + Math.random()*10
   });
 }
 
+function createFirework() {
+  const x = Math.random()*canvas.width;
+  const y = Math.random()*canvas.height/2;
+  const color = `hsl(${Math.random()*360},100%,60%)`;
+  for(let i=0;i<80;i++){
+    fireworks.push({
+      x: x,
+      y: y,
+      vx: (Math.random()-0.5)*6,
+      vy: (Math.random()-0.5)*6,
+      alpha: 1,
+      size: 2 + Math.random()*2,
+      color: color
+    });
+  }
+}
+
+/* ===== ANIMATION LOOP ===== */
 function animate() {
   ctx.clearRect(0,0,canvas.width,canvas.height);
 
-  particles.forEach((p,i)=>{
+  // Hearts
+  hearts.forEach((p,i)=>{
     p.x += p.vx;
     p.y += p.vy;
+    if(p.y > canvas.height) p.y = -20, p.x = Math.random()*canvas.width;
 
-    // loop hearts from top
-    if(p.y > canvas.height) p.y = -20, p.x = Math.random() * canvas.width;
-
-    ctx.globalAlpha = 1;
-    if(p.type === "heart"){
-      ctx.font = p.size + "px Arial";
-      ctx.fillText("❤️", p.x, p.y);
-    } else {
-      ctx.fillStyle = p.color;
-      ctx.fillRect(p.x,p.y,p.size,p.size);
-    }
+    ctx.font = p.size + "px Arial";
+    ctx.fillText("❤️",p.x,p.y);
   });
+
+  // Fireworks
+  fireworks.forEach((p,i)=>{
+    p.x += p.vx;
+    p.y += p.vy;
+    p.alpha -= 0.02;
+    if(p.alpha <=0) fireworks.splice(i,1);
+    ctx.globalAlpha = p.alpha;
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x,p.y,p.size,0,Math.PI*2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  });
+
   requestAnimationFrame(animate);
 }
 animate();
 
-// create initial hearts continuously
-setInterval(createHeart, 150);
+/* ===== INITIAL HEARTS ===== */
+setInterval(()=>createHeart(true),150);
 
 /* ===== YES CLICK ===== */
 document.getElementById("yes").addEventListener("click", ()=>{
   document.getElementById("card").style.display = "none";
   document.getElementById("success").style.display = "block";
 
-  // embed YouTube music
+  // YouTube music
   const musicContainer = document.getElementById("musicContainer");
   musicContainer.innerHTML = `
     <iframe
@@ -162,29 +193,11 @@ document.getElementById("yes").addEventListener("click", ()=>{
     ></iframe>`;
   musicContainer.style.display = "block";
 
-  // add fireworks + confetti + hearts after YES
-  function launchParticle() {
-    for (let i=0;i<100;i++){
-      const type = Math.random();
-      let color = type<0.3 ? `hsl(${Math.random()*360},100%,60%)` : (type<0.7 ? "red" : `hsl(${Math.random()*360},90%,65%)`);
-      particles.push({
-        x: Math.random()*canvas.width,
-        y: Math.random()*canvas.height/2,
-        vx: (Math.random()-0.5)*6,
-        vy: (Math.random()-0.5)*6,
-        size: 4 + Math.random()*4,
-        color: color,
-        type: type<0.7?"heart": "confetti"
-      });
-    }
-  }
-  setInterval(launchParticle, 200);
-});
+  // Faster hearts after YES
+  setInterval(()=>createHeart(false),100);
 
-/* ===== RESIZE ===== */
-window.addEventListener("resize", ()=>{
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
+  // Fireworks + confetti
+  setInterval(createFirework,300);
 });
 </script>
 </body>
